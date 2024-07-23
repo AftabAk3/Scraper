@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daraz Scraper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            animation: fadeIn 1s ease-in-out;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            margin: 10px 0;
+            width: calc(100% - 20px);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #28a745;
+        }
+        input[type="submit"], button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover, button:hover {
+            background-color: #218838;
+        }
+        #loading {
+            display: none;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        #download-link {
+            margin-top: 20px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Daraz Scraper</h1>
+        
+        <div id="step1">
+            <input type="text" id="product_name" placeholder="Enter product name" required>
+            <button onclick="getTotalPages()">Get Total Pages</button>
+        </div>
+        <div id="step2" style="display:none;">
+            <p>Total Pages Available: <span id="total_pages"></span></p>
+            <input type="number" id="num_pages" placeholder="Number of pages to scrape" min="1" required>
+            <button onclick="startScraping()">Start Scraping</button>
+        </div>
+        <div id="loading">
+            <p>Loading...</p>
+        </div>
+        <div id="download-link" style="display:none;">
+            <a id="downloadButton" href="" download="daraz_products.xlsx">
+                <button>Download Scraped Data</button>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function getTotalPages() {
+            var productName = document.getElementById('product_name').value;
+            if (!productName) {
+                alert('Please enter a product name.');
+                return;
+            }
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            var formData = new FormData();
+            formData.append('product_name', productName);
+
+            fetch('/get_total_pages', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('step2').style.display = 'block';
+                document.getElementById('total_pages').innerText = data.total_pages;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to fetch total pages. Please try again.');
+                document.getElementById('step1').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+
+        function startScraping() {
+            var productName = document.getElementById('product_name').value;
+            var numPages = document.getElementById('num_pages').value;
+            if (!numPages || isNaN(numPages) || numPages <= 0) {
+                alert('Please enter a valid number of pages to scrape.');
+                return;
+            }
+
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            var formData = new FormData();
+            formData.append('product_name', productName);
+            formData.append('num_pages', numPages);
+
+            fetch('/scrape', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'daraz_product_search.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                alert('File has been downloaded successfully');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('step1').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to fetch scraped data. Please try again.');
+                document.getElementById('step1').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>
